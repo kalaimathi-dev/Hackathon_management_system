@@ -6,6 +6,9 @@ export default function HackathonManager() {
   const [showForm, setShowForm] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [selectedHackathon, setSelectedHackathon] = useState(null);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [registrationLink, setRegistrationLink] = useState('');
+  const [copiedId, setCopiedId] = useState(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -16,6 +19,7 @@ export default function HackathonManager() {
     submissionDeadline: '',
     maxParticipants: 100,
     tasksPerParticipant: 1,
+    allowPublicRegistration: true,
     status: 'draft'
   });
   const [message, setMessage] = useState('');
@@ -47,14 +51,23 @@ export default function HackathonManager() {
 
     try {
       if (editMode) {
-        await hackathonAPI.update(selectedHackathon._id, formData);
+        const response = await hackathonAPI.update(selectedHackathon._id, formData);
         showMessage('Hackathon updated successfully', 'success');
+        loadHackathons();
       } else {
-        await hackathonAPI.create(formData);
-        showMessage('Hackathon created successfully', 'success');
+        const response = await hackathonAPI.create(formData);
+        const newHackathon = response.data.data.hackathon;
+        const regUrl = response.data.data.registrationUrl;
+        
+        showMessage('Hackathon created successfully!', 'success');
+        
+        // Show registration link modal
+        setRegistrationLink(regUrl);
+        setShowLinkModal(true);
+        
+        loadHackathons();
       }
       resetForm();
-      loadHackathons();
     } catch (error) {
       showMessage(error.response?.data?.message || 'Operation failed', 'error');
     }
@@ -73,6 +86,7 @@ export default function HackathonManager() {
       submissionDeadline: hackathon.submissionDeadline.split('T')[0],
       maxParticipants: hackathon.maxParticipants,
       tasksPerParticipant: hackathon.tasksPerParticipant,
+      allowPublicRegistration: hackathon.allowPublicRegistration ?? true,
       status: hackathon.status
     });
     setEditMode(true);
@@ -91,6 +105,24 @@ export default function HackathonManager() {
     }
   };
 
+  const handleCopyLink = (link, hackathonId) => {
+    navigator.clipboard.writeText(link);
+    setCopiedId(hackathonId);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleRegenerateCode = async (hackathonId) => {
+    if (!window.confirm('This will invalidate the old link. Continue?')) return;
+
+    try {
+      const response = await hackathonAPI.regenerateCode(hackathonId);
+      showMessage('Registration link regenerated successfully', 'success');
+      loadHackathons();
+    } catch (error) {
+      showMessage('Failed to regenerate link', 'error');
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       title: '',
@@ -102,6 +134,7 @@ export default function HackathonManager() {
       submissionDeadline: '',
       maxParticipants: 100,
       tasksPerParticipant: 1,
+      allowPublicRegistration: true,
       status: 'draft'
     });
     setShowForm(false);
@@ -124,6 +157,45 @@ export default function HackathonManager() {
       {message && (
         <div style={messageType === 'success' ? styles.success : styles.error}>
           {message}
+        </div>
+      )}
+
+      {/* Registration Link Modal */}
+      {showLinkModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowLinkModal(false)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <h2 style={styles.modalTitle}>🎉 Hackathon Created!</h2>
+              <button 
+                onClick={() => setShowLinkModal(false)} 
+                style={styles.closeButton}
+              >
+                ×
+              </button>
+            </div>
+            <div style={styles.modalBody}>
+              <p style={styles.modalText}>
+                Share this registration link with participants:
+              </p>
+              <div style={styles.linkContainer}>
+                <input
+                  type="text"
+                  value={registrationLink}
+                  readOnly
+                  style={styles.linkInput}
+                />
+                <button
+                  onClick={() => handleCopyLink(registrationLink, 'modal')}
+                  style={styles.copyButton}
+                >
+                  {copiedId === 'modal' ? '✓ Copied!' : '📋 Copy'}
+                </button>
+              </div>
+              <p style={styles.modalHint}>
+                💡 You can also copy this link later from the hackathon list below
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -245,16 +317,30 @@ export default function HackathonManager() {
               </div>
             </div>
 
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Tasks Per Participant</label>
-              <input
-                type="number"
-                value={formData.tasksPerParticipant}
-                onChange={(e) => setFormData({...formData, tasksPerParticipant: e.target.value})}
-                min="1"
-                max="10"
-                style={styles.input}
-              />
+            <div style={styles.formRow}>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Tasks Per Participant</label>
+                <input
+                  type="number"
+                  value={formData.tasksPerParticipant}
+                  onChange={(e) => setFormData({...formData, tasksPerParticipant: e.target.value})}
+                  min="1"
+                  max="10"
+                  style={styles.input}
+                />
+              </div>
+
+              <div style={styles.formGroup}>
+                <label style={styles.label}>
+                  <input
+                    type="checkbox"
+                    checked={formData.allowPublicRegistration}
+                    onChange={(e) => setFormData({...formData, allowPublicRegistration: e.target.checked})}
+                    style={{marginRight: '8px'}}
+                  />
+                  Allow Public Registration
+                </label>
+              </div>
             </div>
 
             <div style={styles.buttonGroup}>
@@ -299,6 +385,35 @@ export default function HackathonManager() {
                   <span>👥 {hackathon.participants?.length || 0}/{hackathon.maxParticipants}</span>
                   <span>📝 {hackathon.tasksPerParticipant} tasks/participant</span>
                 </div>
+
+                {/* Registration Link Section */}
+                {hackathon.registrationUrl && (
+                  <div style={styles.linkSection}>
+                    <div style={styles.linkLabel}>🔗 Registration Link:</div>
+                    <div style={styles.linkBox}>
+                      <input
+                        type="text"
+                        value={hackathon.registrationUrl}
+                        readOnly
+                        style={styles.linkInputSmall}
+                        onClick={(e) => e.target.select()}
+                      />
+                      <button
+                        onClick={() => handleCopyLink(hackathon.registrationUrl, hackathon._id)}
+                        style={styles.copyButtonSmall}
+                      >
+                        {copiedId === hackathon._id ? '✓' : '📋'}
+                      </button>
+                      <button
+                        onClick={() => handleRegenerateCode(hackathon._id)}
+                        style={styles.regenerateButton}
+                        title="Regenerate link"
+                      >
+                        🔄
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -453,7 +568,8 @@ const styles = {
     gap: '16px',
     fontSize: '13px',
     color: '#888',
-    flexWrap: 'wrap'
+    flexWrap: 'wrap',
+    marginBottom: '16px'
   },
   actionButtons: {
     display: 'flex',
@@ -476,6 +592,137 @@ const styles = {
     borderRadius: '6px',
     fontSize: '13px',
     cursor: 'pointer'
+  },
+  linkSection: {
+    marginTop: '16px',
+    padding: '12px',
+    background: '#f0f7ff',
+    borderRadius: '8px',
+    border: '1px solid #cce5ff'
+  },
+  linkLabel: {
+    fontSize: '13px',
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: '8px'
+  },
+  linkBox: {
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'center'
+  },
+  linkInputSmall: {
+    flex: 1,
+    padding: '8px 12px',
+    border: '1px solid #ddd',
+    borderRadius: '6px',
+    fontSize: '13px',
+    background: 'white',
+    fontFamily: 'monospace'
+  },
+  copyButtonSmall: {
+    padding: '8px 16px',
+    background: '#667eea',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '13px',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap'
+  },
+  regenerateButton: {
+    padding: '8px 12px',
+    background: '#ff9800',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '13px',
+    cursor: 'pointer'
+  },
+  modalOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0,0,0,0.5)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000
+  },
+  modal: {
+    background: 'white',
+    borderRadius: '16px',
+    padding: '0',
+    maxWidth: '600px',
+    width: '90%',
+    boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+  },
+  modalHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '24px 24px 16px',
+    borderBottom: '1px solid #eee'
+  },
+  modalTitle: {
+    fontSize: '24px',
+    fontWeight: '600',
+    color: '#333',
+    margin: 0
+  },
+  closeButton: {
+    background: 'none',
+    border: 'none',
+    fontSize: '32px',
+    color: '#999',
+    cursor: 'pointer',
+    padding: '0',
+    width: '32px',
+    height: '32px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  modalBody: {
+    padding: '24px'
+  },
+  modalText: {
+    fontSize: '16px',
+    color: '#666',
+    marginBottom: '16px'
+  },
+  linkContainer: {
+    display: 'flex',
+    gap: '12px',
+    marginBottom: '16px'
+  },
+  linkInput: {
+    flex: 1,
+    padding: '12px',
+    border: '2px solid #667eea',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontFamily: 'monospace',
+    background: '#f8f9ff'
+  },
+  copyButton: {
+    padding: '12px 24px',
+    background: '#667eea',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap'
+  },
+  modalHint: {
+    fontSize: '14px',
+    color: '#999',
+    textAlign: 'center',
+    marginTop: '12px'
   },
   success: {
     background: '#d4edda',

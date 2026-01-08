@@ -12,6 +12,7 @@ import ParticipantList from './components/Admin/ParticipantList';
 import ParticipantDashboard from './components/Participant/ParticipantDashboard';
 import BrowseHackathons from './components/Participant/BrowseHackathons';
 import JudgeDashboard from './components/Judge/JudgeDashboard';
+import PublicRegistration from './components/Public/PublicRegistration';
 
 function getDefaultRoute() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -28,7 +29,6 @@ function ProtectedRoute({ children, allowedRoles }) {
   }
   
   if (!user) {
-    // Save the attempted URL to redirect back after login
     const currentPath = window.location.pathname;
     if (currentPath !== '/login') {
       sessionStorage.setItem('redirectAfterLogin', currentPath);
@@ -54,6 +54,10 @@ function AppRoutes() {
     <>
       {isAuthenticated && <Navbar />}
       <Routes>
+        {/* Public Routes - No authentication required */}
+        <Route path="/register/:code" element={<PublicRegistration />} />
+        
+        {/* Auth Routes */}
         <Route path="/login" element={
           isAuthenticated ? <Navigate to={getDefaultRoute()} replace /> : <Login />
         } />
@@ -62,6 +66,7 @@ function AppRoutes() {
         } />
         <Route path="/verify-email" element={<VerifyEmail />} />
         
+        {/* Admin Routes */}
         <Route path="/admin/dashboard" element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdminDashboard />
@@ -92,6 +97,7 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
         
+        {/* Participant Routes */}
         <Route path="/participant/dashboard" element={
           <ProtectedRoute allowedRoles={['participant']}>
             <ParticipantDashboard />
@@ -104,12 +110,14 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
         
+        {/* Judge Routes */}
         <Route path="/judge/dashboard" element={
           <ProtectedRoute allowedRoles={['judge', 'admin']}>
             <JudgeDashboard />
           </ProtectedRoute>
         } />
         
+        {/* Error Routes */}
         <Route path="/unauthorized" element={
           <div style={styles.unauthorized}>
             <h1>Unauthorized Access</h1>
@@ -117,6 +125,7 @@ function AppRoutes() {
           </div>
         } />
         
+        {/* Default Routes */}
         <Route path="/" element={
           isAuthenticated ? <Navigate to={getDefaultRoute()} replace /> : <Navigate to="/login" replace />
         } />

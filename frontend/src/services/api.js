@@ -66,7 +66,12 @@ export const hackathonAPI = {
   getById: (id) => api.get(`/hackathons/${id}`),
   update: (id, data) => api.put(`/hackathons/${id}`, data),
   delete: (id) => api.delete(`/hackathons/${id}`),
-  enroll: (id) => api.post(`/hackathons/${id}/enroll`)
+  enroll: (id) => api.post(`/hackathons/${id}/enroll`),
+  
+  // NEW: Public registration methods
+  getByCode: (code) => api.get(`/hackathons/public/code/${code}`),
+  registerViaLink: (code, data) => api.post(`/hackathons/public/register/${code}`, data),
+  regenerateCode: (id) => api.post(`/hackathons/${id}/regenerate-code`)
 };
 
 export const taskAPI = {

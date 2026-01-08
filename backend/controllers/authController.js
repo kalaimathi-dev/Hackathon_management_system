@@ -32,7 +32,10 @@ const register = async (req, res) => {
 
     await user.save();
 
-    await sendVerificationEmail(user, verificationToken);
+    // Send verification email (don't block response if it fails)
+    sendVerificationEmail(user, verificationToken).catch(err => {
+      console.error('Failed to send verification email:', err);
+    });
 
     await AuditLog.create({
       action: 'user_registered',
