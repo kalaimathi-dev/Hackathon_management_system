@@ -14,12 +14,27 @@ export default defineConfig({
       'unobstruent-wrongful-mamie.ngrok-free.dev'
     ],
 
+    // ⚠️ Proxy only works in development, not on Vercel
+    // In production, your frontend/.env should have VITE_API_URL
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,
         secure: false,
         ws: true
+      }
+    }
+  },
+  
+  // Ensure proper base path for Vercel
+  base: '/',
+  
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: undefined
       }
     }
   }
