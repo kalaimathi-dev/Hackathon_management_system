@@ -22,7 +22,8 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:3000',
-  'https://hackathon-management-system-chi.vercel.app'
+  'https://hackathon-management-system-chi.vercel.app',
+  'https://hackathon-management-system-kalaimathis-projects.vercel.app'
 ];
 
 // Add FRONTEND_URL from env if it exists and is different
