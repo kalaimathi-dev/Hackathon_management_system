@@ -97,15 +97,20 @@ const verifyEmail = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    
+    console.log('🔐 Login attempt for:', email);
 
     const user = await User.findOne({ email });
 
     if (!user) {
+      console.log('❌ User not found:', email);
       return res.status(401).json({ 
         success: false, 
-        message: 'Invalid credentials' 
+        message: 'User not found. Please register first.' 
       });
     }
+
+    console.log('✅ User found:', user.email, '| Verified:', user.isEmailVerified);
 
     if (user.isLocked()) {
       const lockTimeRemaining = Math.ceil((user.lockUntil - Date.now()) / 60000);
@@ -118,19 +123,23 @@ const login = async (req, res) => {
     const isMatch = await user.comparePassword(password);
 
     if (!isMatch) {
+      console.log('❌ Password mismatch for:', email);
       await user.incrementLoginAttempts();
       return res.status(401).json({ 
         success: false, 
-        message: 'Invalid credentials' 
+        message: 'Incorrect password' 
       });
     }
 
     if (!user.isEmailVerified) {
+      console.log('⚠️ Email not verified for:', email);
       return res.status(403).json({ 
         success: false, 
         message: 'Please verify your email before logging in' 
       });
     }
+
+    console.log('✅ Login successful for:', email);
 
     await user.resetLoginAttempts();
 
