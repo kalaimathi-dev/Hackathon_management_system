@@ -9,8 +9,11 @@ const register = async (req, res) => {
   try {
     const { name, email, password, role, skills } = req.body;
 
+    console.log('📝 Registration attempt:', { name, email, role });
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
+      console.log('❌ Email already exists:', email);
       return res.status(400).json({ 
         success: false, 
         message: 'Email already registered' 
@@ -31,6 +34,7 @@ const register = async (req, res) => {
     });
 
     await user.save();
+    console.log('✅ User saved to database:', user._id, user.email);
 
     // Send verification email (don't block response if it fails)
     sendVerificationEmail(user, verificationToken).catch(err => {
@@ -55,7 +59,7 @@ const register = async (req, res) => {
     console.error('Registration error:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Registration failed' 
+      message: 'Registration failed: ' + error.message 
     });
   }
 };
