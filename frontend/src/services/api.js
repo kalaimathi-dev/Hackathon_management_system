@@ -26,11 +26,26 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Skip refresh token logic for auth endpoints (login, register, refresh-token, verify-email)
+    const isAuthEndpoint = originalRequest.url?.includes('/auth/login') ||
+                          originalRequest.url?.includes('/auth/register') ||
+                          originalRequest.url?.includes('/auth/refresh-token') ||
+                          originalRequest.url?.includes('/auth/verify-email');
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true;
       
+      const refreshToken = localStorage.getItem('refreshToken');
+      
+      // Only attempt refresh if we have a refresh token
+      if (!refreshToken) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+      
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
         const response = await axios.post(`${API_URL}/auth/refresh-token`, {
           refreshToken
         });
