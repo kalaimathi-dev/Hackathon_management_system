@@ -14,6 +14,9 @@ const judgeRoutes = require('./routes/judgeRoutes');
 
 const app = express();
 
+// Trust proxy - required for rate limiting behind Render/Vercel proxies
+app.set('trust proxy', 1);
+
 /* -------------------- DB CONNECTION -------------------- */
 connectDB();
 
