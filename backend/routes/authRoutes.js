@@ -24,6 +24,30 @@ router.get('/debug/users', async (req, res) => {
   }
 });
 
+// TEMPORARY: Manually verify a user's email (for testing when email service is down)
+router.get('/debug/verify/:email', async (req, res) => {
+  try {
+    const email = req.params.email.toLowerCase();
+    const user = await User.findOne({ email });
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    
+    user.isEmailVerified = true;
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+    await user.save();
+    
+    res.json({ 
+      success: true, 
+      message: `Email verified for ${email}. You can now login.`
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 router.post('/register', registerValidation, authController.register);
 router.get('/verify-email', authController.verifyEmail);
 router.post('/login', loginLimiter, loginValidation, authController.login);

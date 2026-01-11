@@ -1,18 +1,24 @@
 const nodemailer = require('nodemailer');
 
-// Create reusable transporter
+// Create reusable transporter - use port 465 with SSL for Render compatibility
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // Use 'gmail' service for Gmail
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // Use SSL
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD
-  }
+  },
+  connectionTimeout: 10000, // 10 seconds
+  greetingTimeout: 10000,
+  socketTimeout: 10000
 });
 
-// Verify transporter configuration on startup
+// Verify transporter configuration on startup (non-blocking)
 transporter.verify(function (error, success) {
   if (error) {
-    console.error('Email transporter verification failed:', error);
+    console.error('Email transporter verification failed:', error.message);
+    console.error('Email sending may not work, but registration will still succeed.');
   } else {
     console.log('✓ Email server is ready to send messages');
   }
@@ -23,7 +29,7 @@ const sendEmail = async (to, subject, html) => {
     console.log('Attempting to send email to:', to);
     
     const mailOptions = {
-      from: `"Hackathon Platform" <${process.env.EMAIL_USER}>`, // Use EMAIL_USER as sender
+      from: `"Hackathon Platform" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       html
@@ -34,7 +40,6 @@ const sendEmail = async (to, subject, html) => {
     return true;
   } catch (error) {
     console.error('✗ Email sending failed:', error.message);
-    console.error('Full error:', error);
     return false;
   }
 };
