@@ -63,21 +63,48 @@ const corsOptions = {
     } else {
       console.log('❌ CORS BLOCKED for:', normalizedOrigin);
       console.log('   Allowed origins are:', allowedOrigins);
-      callback(new Error('Not allowed by CORS'));
+      // Return the origin anyway to allow the request but log the issue
+      // This prevents the preflight from failing completely
+      callback(null, false);
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
   maxAge: 86400,
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 200 // Changed from 204 to 200 for better compatibility
 };
 
-app.use(cors(corsOptions));
+// Manual CORS headers for preflight - this runs BEFORE the cors middleware
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    const isAllowed = allowedOrigins.some(allowed => {
+      const normalizedAllowed = allowed.replace(/\/$/, '');
+      return normalizedAllowed === normalizedOrigin;
+    });
+    
+    if (isAllowed) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+      res.header('Access-Control-Max-Age', '86400');
+    }
+  }
+  
+  // Handle preflight OPTIONS request
+  if (req.method === 'OPTIONS') {
+    console.log('✈️ Preflight request handled for:', req.path);
+    return res.status(200).end();
+  }
+  
+  next();
+});
 
-// Handle preflight for all routes
-app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
 
 /* -------------------- BODY PARSER -------------------- */
 app.use(express.json({ limit: '10mb' }));
