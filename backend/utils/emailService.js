@@ -199,10 +199,67 @@ const sendEvaluationResultEmail = async (user, task, hackathon, evaluation) => {
   }
 };
 
+const sendRegistrationEmail = async (user) => {
+  try {
+    const loginUrl = `${process.env.FRONTEND_URL}/login`;
+    
+    console.log('Sending registration welcome email to:', user.email);
+    
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f9f9f9;">
+        <div style="background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+          <h2 style="color: #333; margin-bottom: 20px;">🎉 Welcome to Hackathon Management Platform!</h2>
+          <p style="color: #666; font-size: 16px; line-height: 1.6;">Hi ${user.name},</p>
+          <p style="color: #666; font-size: 16px; line-height: 1.6;">
+            Thank you for registering on our platform! Your account has been created successfully.
+          </p>
+          
+          <div style="background: #f8f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #333; margin-top: 0;">Your Account Details:</h3>
+            <p style="color: #666; margin: 8px 0;"><strong>Name:</strong> ${user.name}</p>
+            <p style="color: #666; margin: 8px 0;"><strong>Email:</strong> ${user.email}</p>
+            <p style="color: #666; margin: 8px 0;"><strong>Role:</strong> ${user.role}</p>
+          </div>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${loginUrl}" 
+               style="display: inline-block; padding: 15px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                      color: white; text-decoration: none; border-radius: 8px; font-weight: 500; font-size: 16px;">
+              Login to Your Account
+            </a>
+          </div>
+
+          <p style="color: #666; font-size: 14px; line-height: 1.6;">
+            You can now browse hackathons and participate in exciting challenges!
+          </p>
+          
+          <p style="color: #999; font-size: 13px; margin-top: 30px;">
+            If you didn't create this account, please ignore this email.
+          </p>
+        </div>
+      </div>
+    `;
+
+    const result = await sendEmail(user.email, 'Welcome to Hackathon Management Platform!', html);
+    
+    if (result) {
+      console.log('✓ Registration email sent successfully to:', user.email);
+    } else {
+      console.error('✗ Failed to send registration email to:', user.email);
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error in sendRegistrationEmail:', error);
+    return false;
+  }
+};
+
 module.exports = {
   sendVerificationEmail,
   sendWelcomeEmail,
   sendTaskAssignmentEmail,
   sendSubmissionConfirmationEmail,
-  sendEvaluationResultEmail
+  sendEvaluationResultEmail,
+  sendRegistrationEmail
 };

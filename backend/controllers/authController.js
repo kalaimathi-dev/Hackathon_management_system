@@ -2,7 +2,7 @@ const User = require('../models/User');
 const RefreshToken = require('../models/RefreshToken');
 const AuditLog = require('../models/AuditLog');
 const { generateAccessToken, generateRefreshToken, verifyRefreshToken } = require('../config/jwt');
-const { sendVerificationEmail } = require('../utils/emailService');
+const { sendVerificationEmail, sendRegistrationEmail } = require('../utils/emailService');
 const { generateToken, getClientIp } = require('../utils/helpers');
 
 const register = async (req, res) => {
@@ -20,25 +20,21 @@ const register = async (req, res) => {
       });
     }
 
-    const verificationToken = generateToken();
-    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
     const user = new User({
       name,
       email,
       password,
       role: role || 'participant',
       skills: skills || [],
-      emailVerificationToken: verificationToken,
-      emailVerificationExpires: verificationExpires
+      isEmailVerified: true // Auto-verify - no email verification required
     });
 
     await user.save();
     console.log('✅ User saved to database:', user._id, user.email);
 
-    // Send verification email (don't block response if it fails)
-    sendVerificationEmail(user, verificationToken).catch(err => {
-      console.error('Failed to send verification email:', err);
+    // Send welcome registration email (don't block response if it fails)
+    sendRegistrationEmail(user).catch(err => {
+      console.error('Failed to send registration email:', err);
     });
 
     await AuditLog.create({
@@ -49,7 +45,7 @@ const register = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Registration successful. Please check your email to verify your account.',
+      message: 'Registration successful! You can now login.',
       data: {
         userId: user._id,
         email: user.email
